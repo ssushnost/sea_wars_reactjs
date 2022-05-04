@@ -44,34 +44,25 @@ io.on("connection", (socket) => {
   });
 
   socket.on("hit", (data) => {
-    console.log("hit");
     socket.to(data.roomID).emit("hit_back", data);
-    console.log(data);
-  });
-
-  socket.on("change_turn", (isTurn) => {
-    let _roomID = "";
-    for (const roomID in rooms) {
-      rooms[roomID].players.forEach((player) => {
-        if (player.id === socket.id) {
-          _roomID = roomID;
-        }
-      });
-    }
-    socket.to(_roomID).emit("change_turn_back", isTurn);
   });
 
   socket.on("hit_result", (data) => {
     console.log("hit result");
+    console.log(data);
     let _roomID = "";
     for (const roomID in rooms) {
       rooms[roomID].players.forEach((player) => {
         if (player.id === socket.id) {
           _roomID = roomID;
+          _playerID = player.id;
         }
       });
     }
     socket.to(_roomID).emit("hit_result_back", data);
+    if (data.mark === "╳") socket.to(_roomID).emit("set_turn", true);
+    else if (data.mark === "○") io.to(_playerID).emit("set_turn", true);
+    else return console.error("wrong mark");
   });
 
   socket.on("field_ready", (isReady) => {
@@ -87,7 +78,17 @@ io.on("connection", (socket) => {
     }
     io.to(rooms[_roomID].players[0].id).emit("set_turn", true);
   });
-
+  socket.on("lose", () => {
+    let _roomID = "";
+    for (const roomID in rooms) {
+      rooms[roomID].players.forEach((player, playerIndex) => {
+        if (player.id === socket.id) {
+          _roomID = roomID;
+        }
+      });
+    }
+    socket.to(_roomID).emit("win", true);
+  })
   socket.on("disconnect", () => {
     for (const roomID in rooms) {
       rooms[roomID].players.forEach((player, player_index) => {

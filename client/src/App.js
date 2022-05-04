@@ -51,7 +51,7 @@ function deepListCopy(l) {
 }
 
 export default function SeaWars() {
-  const [hitCounter, setHitCounter] = React.useState(0);
+  const hitCounterRef = React.useRef(0);
   const [username, setUsername] = React.useState("");
   const [roomID, setRoomID] = React.useState("");
   const [gridContentState, setGridContentState] = React.useState(gridContent);
@@ -70,11 +70,17 @@ export default function SeaWars() {
 
   React.useEffect(() => {
     socket.on("hit_back", (data) => {
-      console.log("hit back");
       setGridContentState((prev) => {
         const gridContentStateCopy = deepListCopy(prev);
         if (grid[data.row][data.col]) {
           gridContentStateCopy[data.row][data.col] = "╳";
+          hitCounterRef.current += 1;
+          console.log(hitCounterRef);
+          if (hitCounterRef.current === 20) {
+            socket.emit("lose", true)
+            alert("you lose :(");
+            setTimeout(() => document.location.reload(), 3000);
+          }
           const hit_result_data = {
             row: data.row,
             col: data.col,
@@ -94,13 +100,11 @@ export default function SeaWars() {
       });
     });
     socket.on("hit_result_back", (data) => {
-      console.log("hit_result_back");
       setGridContentEnemyState((prev) => {
         const gridContentEnemyStateCopy = deepListCopy(prev);
         gridContentEnemyStateCopy[data.row][data.col] = data.mark;
         return gridContentEnemyStateCopy;
       });
-      socket.emit("change_turn", true);
     });
     socket.on("win", () => {
       setTimeout(() => document.location.reload(), 3000);
@@ -241,14 +245,13 @@ export default function SeaWars() {
               return false;
             }}
             onClick={async () => {
-              setTurn(false);
               const data = {
                 roomID,
                 row: i,
                 col: j,
               };
               await socket.emit("hit", data);
-              await socket.emit("change_turn", true);
+              setTurn(false);
             }}
             key={`${i}-${j}`}
           >
@@ -629,6 +632,9 @@ export default function SeaWars() {
               }}
             ></div>
           ) : (
+            <></>
+          )}
+          {turn ? null : (
             <div
               className="earlyHitPrevention"
               style={{
